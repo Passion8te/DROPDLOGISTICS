@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dropd Logistics — Driver Application</title>
+<style>
+/* Your original styles */
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Arial,sans-serif;}
+body{background:#0A1F12;}
+/* ... keep all your original CSS ... */
+</style>
+</head>
+<body>
+<!-- Your original HTML body -->
+
+<script>
+// UPDATED CENTRAL BACKEND
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbw1eG7qJ0-xkrn0133eDiVSZpL9_oapPDsYmAmlfmlgttDdZfz40FrolwvjmXlhr7Hr/exec";
+
+async function submitForm() {
+  // Your existing validation code...
+
+  showStatus('Submitting your application…', 'loading');
+
+  const payload = {
+    'form_type':         'driver_application',
+    'Timestamp':        new Date().toLocaleString('en-TT'),
+    // ... all your other payload fields ...
+  };
+
+  try {
+    const res = await fetch(SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (!result.ok) throw new Error(result.error || 'Unknown error');
+    showStatus("✅ Application submitted!", 'success');
+  } catch(err) {
+    console.error('Submission failed:', err);
+    showStatus('Something went wrong. Please try again or WhatsApp us directly.', 'error');
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DROPD — Merchant Register</title>
+<style>
+/* Your original full styles (keep them) */
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--green:#2ECC71;--dark:#0A1F12;--white:#fff;--grey:#F5F7F5;--border:#D8E8D8;--text:#1a2e1a;--muted:#6B8F6B;--radius:12px;--shadow:0 2px 16px rgba(10,31,18,.08);}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--grey);color:var(--text);min-height:100vh}
+/* ... rest of your original CSS ... */
+</style>
+</head>
+<body>
+<!-- Your original HTML body stays the same -->
+
+<script>
+// UPDATED CENTRAL BACKEND
+const WEBHOOK = "https://script.google.com/macros/s/AKfycbw1eG7qJ0-xkrn0133eDiVSZpL9_oapPDsYmAmlfmlgttDdZfz40FrolwvjmXlhr7Hr/exec";
+
+let selectedPkg = '';
+
+function selectPkg(el, name) {
+  document.querySelectorAll('.pkg-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedPkg = name;
+}
+
+function v(id) {
+  return document.getElementById(id)?.value?.trim() || '';
+}
+
+function validate() {
+  const required = ['businessName','ownerName','whatsapp','location','industry'];
+  let ok = true;
+  required.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el.value.trim()) { el.classList.add('err'); ok = false; }
+    else el.classList.remove('err');
+  });
+  if (!selectedPkg) { ok = false; }
+  return ok;
+}
+
+async function submitForm() {
+  if (!validate()) {
+    document.getElementById('errMsg').style.display = 'block';
+    return;
+  }
+  document.getElementById('errMsg').style.display = 'none';
+
+  const btn = document.getElementById('submitBtn');
+  const spinner = document.getElementById('spinner');
+  const label = document.getElementById('btnLabel');
+  btn.disabled = true;
+  spinner.style.display = 'inline-block';
+  label.textContent = 'Registering…';
+
+  const ref = 'MR-' + Date.now().toString(36).toUpperCase().slice(-6);
+
+  const payload = {
+    form_type:       'merchant_register',
+    client_id:       ref,
+    business_name:   v('businessName'),
+    owner_name:      v('ownerName'),
+    whatsapp:        v('whatsapp'),
+    email:           v('email'),
+    location:        v('location'),
+    industry:        v('industry'),
+    package_tier:    selectedPkg,
+    sign_date:       new Date().toLocaleDateString('en-TT'),
+    avg_deliveries:  v('avgDeliveries'),
+    delivery_days:   v('deliveryDays'),
+    many_chat:       document.getElementById('manyChat').checked ? 'Yes' : 'No',
+    wi_pay:          document.getElementById('wiPay').checked ? 'Yes' : 'No',
+    google_biz:      document.getElementById('googleBiz').checked ? 'Yes' : 'No',
+    instagram:       v('instagram'),
+    how_they_heard:  v('howHeard'),
+    notes:           v('notes'),
+    status:          'Pending',
+    onboarding_ref:  ref,
+  };
+
+  try {
+    const res = await fetch(WEBHOOK, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (!result.ok) throw new Error(result.error || 'Unknown error');
+
+    // Show success
+    document.querySelectorAll('.section-head, .fields, .pkg-grid, .submit-wrap, .err-msg').forEach(el => el.style.display = 'none');
+    const s = document.getElementById('successScreen');
+    s.style.display = 'block';
+    document.getElementById('refCode').textContent = ref;
+
+  } catch(e) {
+    console.error('Submission failed:', e);
+    alert('Submission failed — please try again or contact us directly.');
+    btn.disabled = false;
+    spinner.style.display = 'none';
+    label.textContent = 'Register';
+  }
+}
+</script>
+</body>
+</html>

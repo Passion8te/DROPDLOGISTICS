@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Free Digital Health Check — DROPD Business</title>
+<meta name="description" content="Find out exactly how much revenue your business is losing. Free Digital Health Check from DROPD Business. Takes 3 minutes.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+/* Paste your original full styles here - they stay the same */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+/* ... (keep all your original CSS) ... */
+</style>
+</head>
+<body>
+<!-- Your original HTML body stays the same -->
+
+<script>
+// NEW CENTRAL BACKEND
+const WEBHOOK = "https://script.google.com/macros/s/AKfycbw1eG7qJ0-xkrn0133eDiVSZpL9_oapPDsYmAmlfmlgttDdZfz40FrolwvjmXlhr7Hr/exec";
+
+/* Keep all your existing functions (validate, collectData, showSuccess, updateSection4, etc.) */
+
+// Only update the submitForm function:
+async function submitForm() {
+  if (!validate(4)) return;
+  const btn=document.getElementById('sub-btn');
+  const lbl=document.getElementById('sub-lbl');
+  const sp=document.getElementById('spinner');
+  const arr=document.getElementById('sub-arr');
+  btn.disabled=true; lbl.textContent='Sending...'; sp.style.display='inline-block'; arr.style.display='none';
+
+  const data = collectData();
+
+  try {
+    const res = await fetch(WEBHOOK,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const result = await res.json();
+    if (!result.ok) throw new Error(result.error || 'Unknown error');
+    toast('✓ Submitted successfully','ok');
+  } catch(e) {
+    console.error(e);
+    toast('⚠ Submission failed — please try again','err');
+  }
+  showSuccess(data);
+}
+
+updateProg(1);
+</script>
+</body>
+</html>

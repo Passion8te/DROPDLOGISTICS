@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DROPD — Delivery Partner Pre-Qualification</title>
+<style>
+/* Your original styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+/* ... keep all your original CSS ... */
+</style>
+</head>
+<body>
+<!-- Your original HTML body -->
+
+<script>
+// UPDATED CENTRAL BACKEND
+const SHEET_URL = "https://script.google.com/macros/s/AKfycbw1eG7qJ0-xkrn0133eDiVSZpL9_oapPDsYmAmlfmlgttDdZfz40FrolwvjmXlhr7Hr/exec";
+
+// Keep all your existing functions (updateScore, computeScore, v, getRadio, etc.)
+
+async function submitForm() {
+  // Your existing validation...
+
+  showStatus('Submitting your application…', 'loading');
+
+  const score = computeScore();
+  // ... build your payload as before ...
+
+  const payload = { /* your full payload */ };
+
+  try {
+    const res = await fetch(SHEET_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+    if (!result.ok) throw new Error(result.error || 'Unknown error');
+    showStatus('✅ Application received!', 'success');
+  } catch(err) {
+    console.error('Submission failed:', err);
+    showStatus('Something went wrong. Please try again or WhatsApp us.', 'error');
+  }
+}
+</script>
+</body>
+</html>
