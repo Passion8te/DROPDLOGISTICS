@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dropd Logistics — Delivery Pricing & Margin Calculator</title>
+<style>
+  :root{
+    --ink:#12181f; --paper:#f6f7f5; --panel:#ffffff;
+    --line:#dfe3e0; --accent:#0d6b4f; --accent-dim:#e7f2ee;
+    --warn:#b5501e; --warn-dim:#fbebe0; --mono:'IBM Plex Mono',ui-monospace,monospace;
+    --sans:'Inter',-apple-system,Segoe UI,sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);}
+  header{padding:20px 16px 16px;border-bottom:1px solid var(--line);}
+  header .tag{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;}
+  header h1{margin:4px 0 0;font-size:18px;font-weight:700;line-height:1.3;}
+  .wrap{max-width:980px;margin:0 auto;padding:16px 12px 40px;display:grid;grid-template-columns:1.1fr .9fr;gap:16px;}
+  @media(max-width:760px){.wrap{grid-template-columns:1fr;padding:12px 10px 32px;gap:12px;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;}
+  @media(max-width:480px){.card{padding:12px;border-radius:8px;}}
+  .card h2{margin:0 0 12px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:#555;font-weight:600;}
+  .row{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px;flex-wrap:wrap;}
+  .row label{font-size:13px;flex:1;min-width:0;}
+  select,input[type=number]{font-family:var(--sans);font-size:14px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;width:100px;max-width:35vw;background:#fff;}
+  .zones{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;}
+  .zone-btn{flex:1 1 auto;min-width:0;padding:8px 6px;border:1px solid var(--line);border-radius:8px;background:#fff;cursor:pointer;font-family:var(--sans);font-size:12px;text-align:center;transition:.15s;}
+  @media(max-width:480px){.zones{gap:6px;} .zone-btn{flex-basis:100%;}}
+  .zone-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .result-line{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+  .result-line:last-child{border-bottom:none;}
+  .result-line.total{font-weight:700;font-size:16px;border-top:2px solid var(--ink);margin-top:6px;padding-top:12px;}
+  .num{font-family:var(--mono);}
+  .flag{margin-top:14px;padding:10px 12px;border-radius:8px;font-size:13px;font-family:var(--mono);}
+  .flag.ok{background:var(--accent-dim);color:var(--accent);}
+  .flag.warn{background:var(--warn-dim);color:var(--warn);}
+  details{margin-top:18px;}
+  summary{cursor:pointer;font-size:13px;color:#555;font-family:var(--mono);}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;margin-top:12px;}
+  .grid2 .row{margin-bottom:8px;}
+  footer{max-width:980px;margin:0 auto;padding:0 20px 40px;color:#888;font-size:12px;font-family:var(--mono);}
+</style>
+</head>
+<body>
+<header>
+  <div class="tag">Dropd Logistics · Ops</div>
+  <h1>Delivery Pricing &amp; Margin Calculator</h1>
+</header>
+
+<div class="wrap">
+  <div class="card">
+    <h2>Delivery details</h2>
+    <div class="zones" id="zoneBtns"></div>
+    <div class="row"><label>Items in this drop-off</label><input type="number" id="items" value="1" min="1"></div>
+    <div class="row"><label>Total weight (kg)</label><input type="number" id="weight" value="2" min="0" step="0.5"></div>
+    <div id="surchargeNote" class="flag ok">No surcharge — within included allowance.</div>
+
+    <details open>
+      <summary>Model assumptions (edit if rates change)</summary>
+      <div class="grid2" id="assumptions"></div>
+    </details>
+  </div>
+
+  <div class="card">
+    <h2>Breakdown</h2>
+    <div id="results"></div>
+  </div>
+</div>
+<footer>Mirrors Dropd Commission Model (Zone-Tier). Update assumptions here to match the spreadsheet if rates change.</footer>
+
+<script>
+const ZONES = {
+  same_city:{label:'Same city / parish', price:40, fuel:10},
+  cross_country:{label:'Cross-country', price:75, fuel:22},
+  interparish:{label:'Interparish / remote', price:130, fuel:34},
+};
+const A = {
+  driverPct: 0.70,
+  includedItems: 3,
+  perExtraItem: 5,
+  includedKg: 5,
+  perExtraKg: 3,
+};
+let zone = 'same_city';
+
+const zoneBtns = document.getElementById('zoneBtns');
+Object.entries(ZONES).forEach(([key,z])=>{
+  const b=document.createElement('button');
+  b.className='zone-btn'+(key===zone?' active':'');
+  b.textContent=z.label; b.dataset.key=key;
+  b.onclick=()=>{zone=key; render();};
+  zoneBtns.appendChild(b);
+});
+
+const assumptionsEl = document.getElementById('assumptions');
+const fields = [
+  ['driverPct','Driver payout %',0.01],
+  ['includedItems','Items included',1],
+  ['perExtraItem','$ per extra item',1],
+  ['includedKg','Kg included',1],
+  ['perExtraKg','$ per extra kg',1],
+];
+fields.forEach(([key,label,step])=>{
+  const row=document.createElement('div'); row.className='row';
+  row.innerHTML=`<label>${label}</label><input type="number" step="${step}" id="a_${key}" value="${A[key]}">`;
+  assumptionsEl.appendChild(row);
+});
+assumptionsEl.addEventListener('input',e=>{
+  const id=e.target.id.replace('a_','');
+  A[id]=parseFloat(e.target.value)||0; render();
+});
+document.getElementById('items').addEventListener('input',render);
+document.getElementById('weight').addEventListener('input',render);
+
+function fmt(n){return '$'+n.toFixed(2);}
+
+function render(){
+  document.querySelectorAll('.zone-btn').forEach(b=>b.classList.toggle('active', b.dataset.key===zone));
+  const z = ZONES[zone];
+  const items = parseFloat(document.getElementById('items').value)||0;
+  const weight = parseFloat(document.getElementById('weight').value)||0;
+
+  const extraItems = Math.max(0, items - A.includedItems);
+  const extraKg = Math.max(0, weight - A.includedKg);
+  const surcharge = Math.max(extraItems*A.perExtraItem, extraKg*A.perExtraKg);
+
+  const noteEl = document.getElementById('surchargeNote');
+  if(surcharge>0){
+    noteEl.className='flag warn';
+    noteEl.textContent = `Surcharge applied: exceeds ${A.includedItems} items / ${A.includedKg}kg allowance.`;
+  } else {
+    noteEl.className='flag ok';
+    noteEl.textContent = 'No surcharge — within included allowance.';
+  }
+
+  const basePrice = z.price;
+  const totalCharge = basePrice + surcharge;
+  const driverPayout = totalCharge * A.driverPct;
+  const companyRetains = totalCharge - driverPayout;
+  const netMargin = companyRetains - z.fuel;
+
+  const res = document.getElementById('results');
+  res.innerHTML = `
+    <div class="result-line"><span>Base zone fee (${z.label})</span><span class="num">${fmt(basePrice)}</span></div>
+    <div class="result-line"><span>Bulk/weight surcharge</span><span class="num">${fmt(surcharge)}</span></div>
+    <div class="result-line total"><span>Total charged to client</span><span class="num">${fmt(totalCharge)}</span></div>
+    <div class="result-line"><span>Driver payout (${(A.driverPct*100).toFixed(0)}%)</span><span class="num">${fmt(driverPayout)}</span></div>
+    <div class="result-line"><span>Company retains</span><span class="num">${fmt(companyRetains)}</span></div>
+    <div class="result-line"><span>Fuel + overhead (fixed)</span><span class="num">-${fmt(z.fuel)}</span></div>
+    <div class="result-line total"><span>Net margin on this trip</span><span class="num" style="color:${netMargin<0?'#b5501e':'#0d6b4f'}">${fmt(netMargin)}</span></div>
+  `;
+}
+render();
+</script>
+</body>
+</html>
