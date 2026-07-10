@@ -72,6 +72,7 @@
     grid-template-columns: 1.1fr 0.9fr;
     gap:20px;
   }
+  .mobile-toggle{display:none;}
   @media (max-width:760px){
     .grid{grid-template-columns:1fr;}
     body{padding:16px 10px;}
@@ -82,13 +83,10 @@
     .section-title{margin-bottom:10px;}
     .field{margin-bottom:10px;}
     .ticket{padding:16px 18px;position:static;}
-    .grid > div:first-child{order:2;}
-    .grid > div:last-child{order:1;}
     .grid > div:first-child .panel:first-child{margin-top:14px;}
     .mobile-toggle{display:block;width:100%;background:var(--panel);border:1px solid var(--amber);color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:13px;text-transform:uppercase;letter-spacing:1px;padding:12px;border-radius:6px;margin-bottom:10px;cursor:pointer;}
     .grid > div:first-child.collapsed .panel{display:none;}
   }
-  .mobile-toggle{display:none;}
 
   .panel{
     background:var(--panel);
@@ -320,8 +318,8 @@
   <div class="grid">
 
     <!-- LEFT: INPUTS -->
-    <div id="inputsCol" class="collapsed">
-      <div class="mobile-toggle" id="mobileToggle" onclick="toggleInputs()">Adjust rates &amp; fees ▾</div>
+    <div id="inputsCol">
+      <div class="mobile-toggle" id="mobileToggle" onclick="toggleInputs()">Hide rates &amp; fees ▴</div>
       <div class="panel" style="margin-bottom:16px;">
         <div class="section-title">Job Details</div>
 
@@ -350,6 +348,9 @@
             <label>Driver share of pickup fee <span class="val" id="pickupShareVal">100%</span></label>
             <input type="range" id="pickupSharePct" min="0" max="100" value="100" style="margin-top:8px;">
           </div>
+        </div>
+        <div class="footnote" style="margin-top:-6px;">
+          This is a separate charge for collecting the parcel from the merchant — distinct from the COD/payment-collection fee further down, which only applies when the driver also collects cash from the recipient.
         </div>
 
         <div class="toggle-row" style="margin-top:2px;">
@@ -415,9 +416,13 @@
             <div class="numinput"><span class="prefix">$</span><input type="number" id="afterhoursFee" value="5" step="0.5"></div>
           </div>
           <div class="field">
-            <label>COD fee <span class="val" id="codVal">3%</span></label>
+            <label>COD fee — % of amount collected <span class="val" id="codVal">3%</span></label>
             <input type="range" id="codPct" min="0" max="10" value="3" style="margin-top:8px;">
           </div>
+        </div>
+        <div class="field">
+          <label>COD fee — flat component <span style="color:var(--text-faint);">(per collection)</span></label>
+          <div class="numinput"><span class="prefix">$</span><input type="number" id="codFlat" value="0" step="0.5"></div>
         </div>
 
         <div class="field">
@@ -550,7 +555,7 @@
     return Math.max(3, items * rate);
   }
 
-  const inputs = ['distance','baseFee','rateKm','radius','oversizeFee','rushPct','afterhoursFee','codPct','fuelPct','payoutPct','volume','pickupFee','pickupSharePct','itemCount','itemValue','overheadPerDelivery'];
+  const inputs = ['distance','baseFee','rateKm','radius','oversizeFee','rushPct','afterhoursFee','codPct','codFlat','fuelPct','payoutPct','volume','pickupFee','pickupSharePct','itemCount','itemValue','overheadPerDelivery'];
   inputs.forEach(id=>{
     $(id).addEventListener('input', calculate);
   });
@@ -569,9 +574,10 @@
     $('rushPct').value = 60;
     $('afterhoursFee').value = 10;
     $('codPct').value = 4.5;
+    $('codFlat').value = 4;
     $('fuelPct').value = 0;
     $('payoutPct').value = 75;
-    $('pickupFee').value = 4;
+    $('pickupFee').value = 8;
     $('pickupSharePct').value = 100;
     $('overheadPerDelivery').value = 2;
     document.getElementById('ttPresetBtn').textContent = 'Trinidad Defaults Loaded ✓';
@@ -587,6 +593,7 @@
     const rushPct = parseFloat($('rushPct').value)||0;
     const afterhoursFee = parseFloat($('afterhoursFee').value)||0;
     const codPct = parseFloat($('codPct').value)||0;
+    const codFlat = parseFloat($('codFlat').value)||0;
     const fuelPct = parseFloat($('fuelPct').value)||0;
     const payoutPct = parseFloat($('payoutPct').value);
     const volume = parseInt($('volume').value);
@@ -644,8 +651,8 @@
     let codAmt = 0;
     let runningTotal = subtotal + rushAmt + fuelAmt;
     if(toggles.cod){
-      codAmt = runningTotal * (codPct/100);
-      lines.push({label:`COD handling (${codPct}%)`, amt: codAmt});
+      codAmt = codFlat + runningTotal * (codPct/100);
+      lines.push({label:`COD handling ($${codFlat.toFixed(2)} + ${codPct}%)`, amt: codAmt});
     }
     let insAmt = 0;
     if(toggles.insurance){
