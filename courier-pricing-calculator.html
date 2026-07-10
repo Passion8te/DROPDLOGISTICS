@@ -74,7 +74,21 @@
   }
   @media (max-width:760px){
     .grid{grid-template-columns:1fr;}
+    body{padding:16px 10px;}
+    .wrap{max-width:100%;}
+    .masthead{margin-bottom:16px;padding-bottom:12px;}
+    .masthead h1{font-size:24px;}
+    .panel{padding:14px 16px;}
+    .section-title{margin-bottom:10px;}
+    .field{margin-bottom:10px;}
+    .ticket{padding:16px 18px;position:static;}
+    .grid > div:first-child{order:2;}
+    .grid > div:last-child{order:1;}
+    .grid > div:first-child .panel:first-child{margin-top:14px;}
+    .mobile-toggle{display:block;width:100%;background:var(--panel);border:1px solid var(--amber);color:var(--amber);font-family:'JetBrains Mono',monospace;font-size:13px;text-transform:uppercase;letter-spacing:1px;padding:12px;border-radius:6px;margin-bottom:10px;cursor:pointer;}
+    .grid > div:first-child.collapsed .panel{display:none;}
   }
+  .mobile-toggle{display:none;}
 
   .panel{
     background:var(--panel);
@@ -306,7 +320,8 @@
   <div class="grid">
 
     <!-- LEFT: INPUTS -->
-    <div>
+    <div id="inputsCol" class="collapsed">
+      <div class="mobile-toggle" id="mobileToggle" onclick="toggleInputs()">Adjust rates &amp; fees ▾</div>
       <div class="panel" style="margin-bottom:16px;">
         <div class="section-title">Job Details</div>
 
@@ -496,6 +511,12 @@
 
 <script>
   const $ = id => document.getElementById(id);
+
+  function toggleInputs(){
+    const col = $('inputsCol');
+    col.classList.toggle('collapsed');
+    $('mobileToggle').textContent = col.classList.contains('collapsed') ? 'Adjust rates & fees ▾' : 'Hide rates & fees ▴';
+  }
   const toggles = { oversize:false, rush:false, afterhours:false, cod:false, insurance:false, fragile:false };
 
   document.querySelectorAll('.chip').forEach(chip=>{
