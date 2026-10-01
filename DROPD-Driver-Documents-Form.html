@@ -309,6 +309,21 @@
     </div>
 
     <div class="field">
+      <label>Upload a Photo of Your Vehicle<span class="req">*</span></label>
+      <div class="dropzone" data-target="vehiclePhoto">
+        <div class="dz-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7H8l1.2-2h5.6L16 7h2.5A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5v-9Z"/><circle cx="12" cy="13" r="3.2"/></svg></div>
+        <div class="dz-text">
+          <div class="main">Choose a file or drag it here</div>
+          <div class="sub">Clear photo of your vehicle, showing the plate if possible (JPG or PNG)</div>
+          <div class="filename"></div>
+        </div>
+        <button type="button" class="dz-clear">&times;</button>
+        <input type="file" id="vehiclePhoto" name="vehiclePhoto" accept=".jpg,.jpeg,.png" required>
+      </div>
+      <div class="error-text">Please upload a photo of your vehicle.</div>
+    </div>
+
+    <div class="field">
       <label>Certificate of Character<span class="req">*</span></label>
       <div class="dropzone" data-target="certChar">
         <div class="dz-icon"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5Z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg></div>
@@ -451,7 +466,7 @@
     setInvalid(waField, waBad);
     if (waBad) ok = false;
 
-    ['licence','vehicleReg','insurance','profilePhoto','certChar'].forEach(id => {
+    ['licence','vehicleReg','insurance','profilePhoto','vehiclePhoto','certChar'].forEach(id => {
       const el = document.getElementById(id);
       const field = el.closest('.field');
       const bad = !el.files || el.files.length === 0;
@@ -497,7 +512,7 @@
       // JSON payload, same as the other 4 DROPD forms already do. Apps
       // Script then rebuilds each file into a real Blob server-side with
       // Utilities.newBlob(Utilities.base64Decode(...), mimeType, filename).
-      const fileFields = ['licence','vehicleReg','insurance','profilePhoto','certChar'];
+      const fileFields = ['licence','vehicleReg','insurance','profilePhoto','vehiclePhoto','certChar'];
       const files = {};
       for (const id of fileFields) {
         const f = document.getElementById(id).files[0];
