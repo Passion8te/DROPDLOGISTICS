@@ -87,6 +87,7 @@ textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radi
  <div class="content">
   <div class="card">
    <p class="st">Route</p><p class="sh">Pick a place, type an address (looked up on OpenStreetMap), or drop a pin with 📍. Trinidad ↔ Tobago is detected automatically.</p><div class="rt" id="rt">Route type: waiting for locations</div>
+   <div id="dtBox"><label class="fl">Delivery type</label><select id="dtype"><option value="handover">Via meet-up / handover point (two drivers)</option><option value="direct">Direct: merchant → customer (one driver)</option></select></div>
    <label class="fl">1 · Pick-up (merchant)</label>
    <div class="pt"><input type="text" id="p0" placeholder="e.g. Chaguanas" autocomplete="off"><button type="button" class="pin" data-i="0" title="Drop a pin">📍</button><div class="ac" id="ac0"></div></div><div class="loc-ok" id="s0"></div>
    <div id="muBox"><label class="fl">2 · Meet-up / handover point (safe agreed location on route)</label>
@@ -158,7 +159,7 @@ textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radi
   </div>
   <div class="actions"><button class="btn" id="go">Calculate Fee</button><button class="ghost" id="reset" type="button">Reset</button><div class="status" id="status"></div></div>
  </div>
- <p class="fine">Distances use live road routing when available, otherwise straight-line × road factor. Same-island handovers are quoted on the pick-up → delivery band and split by leg distance; inter-island jobs are priced as origin-island leg + destination-island leg (Tobago bands) + inter-island base + weight/size + handling, and split between the two island drivers. Competitor figures come from their public sites and may change. This page runs in the browser and is not password protected — share only with directors.</p>
+ <p class="fine">Distances use live road routing when available, otherwise straight-line × road factor. Direct deliveries (merchant → customer, one driver) are quoted on the direct road distance and paid to a single driver. Same-island handovers are quoted on the pick-up → delivery band and split by leg distance; inter-island jobs are priced as origin-island leg + destination-island leg (Tobago bands) + inter-island base + weight/size + handling, and split between the two island drivers. Competitor figures come from their public sites and may change. This page runs in the browser and is not password protected — share only with directors.</p>
 </div>
 <div class="mm" id="mm"><div class="mb"><div class="mh"><b>Drop a pin</b><button type="button" id="mx" class="pin" style="position:static">×</button></div><div id="mc"></div><div class="mf"><span id="mcoord">Tap the map to place the pin.</span><button type="button" id="mgps" class="pin" style="position:static">GPS</button><button type="button" class="btn" id="mok" style="margin:0;width:auto;padding:10px 16px">Use pin</button></div></div></div>
 
@@ -304,7 +305,7 @@ function matches(q){q=norm(q);if(!q)return[];return PLACES.map(p=>{const n=norm(
 async function geocode(q){const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=tt&viewbox=-61.95,11.4,-60.45,9.95&bounded=1&email=info@dropdlogistics.com&q='+encodeURIComponent(q));
  const j=await r.json();return j.length?{name:j[0].display_name.split(',').slice(0,2).join(','),lat:+j[0].lat,lng:+j[0].lon}:null}
 function tag(i){const p=loc[i];$('s'+i).textContent=p?'✓ '+p.name+' · '+ISLN[isl(p.lat)]:'';sync()}
-function sync(){const a=loc[0],c=loc[2],inter=!!(a&&c&&isl(a.lat)!==isl(c.lat));$('muBox').classList.toggle('hidden',inter);$('wvBox').classList.toggle('hidden',!inter);$('rt').textContent=!a||!c?'Route type: waiting for locations':inter?'Route type: Inter-island (Trinidad ↔ Tobago)':isl(a.lat)==='TOB'?'Route type: Tobago zone delivery':'Route type: Trinidad zone delivery'}
+function sync(){const a=loc[0],c=loc[2],inter=!!(a&&c&&isl(a.lat)!==isl(c.lat));const dir=$('dtype').value==='direct';$('dtBox').classList.toggle('hidden',inter);$('muBox').classList.toggle('hidden',inter||dir);$('r2').parentElement.classList.toggle('hidden',dir&&!inter);$('r1').previousElementSibling.textContent=dir&&!inter?'Driver rank':'Pick-up driver rank';$('wvBox').classList.toggle('hidden',!inter);$('rt').textContent=!a||!c?'Route type: waiting for locations':inter?'Route type: Inter-island (Trinidad ↔ Tobago)':isl(a.lat)==='TOB'?'Route type: Tobago '+(dir?'direct delivery':'zone delivery'):'Route type: Trinidad '+(dir?'direct delivery':'zone delivery')}
 [0,1,2].forEach(i=>{const inp=$('p'+i),ac=$('ac'+i);
  inp.addEventListener('input',()=>{loc[i]=null;G=null;tag(i);const m=matches(inp.value);ac.innerHTML='';
   m.forEach(p=>{const d=document.createElement('div');d.textContent=p.name+(isl(p.lat)==='TOB'?' (Tobago)':'');d.onclick=()=>{inp.value=p.name;loc[i]=p;ac.style.display='none';tag(i)};ac.appendChild(d)});ac.style.display=m.length?'block':'none'});
@@ -347,9 +348,9 @@ function calc(){
   core=b.price;lines.push([`Distance band up to ${b.max} km (pick-up → delivery ≈ ${G.ac.km.toFixed(1)} km, ${G.ac.src})`,b.price]);
   if(sp){core+=sp;lines.push([`${LBL[speed]} surcharge`,sp])}
   if(speed==='standard'){const t=TIERS.find(t=>qty>=t.min&&qty<=t.max);if(qty>=100)warn.push('100+ deliveries/day qualifies for contract pricing — quote separately.');else if(t){core=Math.max(0,core-t.d);lines.push([`${t.l} volume discount (${qty}/day)`,-t.d])}}else if(qty>4)warn.push('Volume discount applies to Standard speed only.');
-  R.tb=tob?[{t:`Pick-up → delivery (${G.ac.km.toFixed(1)} km), band up to ${b.max} km`,v:b.price,max:b.max}]:[];R.tobIdx=tob?[1,2]:[];R.mode='Zone handover · '+ISLN[isl(loc[0].lat)];R.meta=`Route: ${G.l1.from} → ${G.l1.to} → ${G.l2.to} · legs ${G.l1.km.toFixed(1)} km + ${G.l2.km.toFixed(1)} km`;
-  R.note='Zone handover: the customer is quoted the band for pick-up → delivery. Split follows each leg’s share of the road distance.';
-  const s=G.l1.km+G.l2.km;R.auto=s>0?Math.round(G.l1.km/s*100):50;R.ref=G.ac.km;
+  R.tb=tob?[{t:`Pick-up → delivery (${G.ac.km.toFixed(1)} km), band up to ${b.max} km`,v:b.price,max:b.max}]:[];R.tobIdx=tob?[1,2]:[];R.mode=(G.direct?'Direct delivery · ':'Zone handover · ')+ISLN[isl(loc[0].lat)];R.meta=G.direct?`Direct: ${G.l1.from} → ${G.l1.to} · ${G.ac.km.toFixed(1)} km (${G.ac.src})`:`Route: ${G.l1.from} → ${G.l1.to} → ${G.l2.to} · legs ${G.l1.km.toFixed(1)} km + ${G.l2.km.toFixed(1)} km · direct pick-up → delivery ${G.ac.km.toFixed(1)} km`;
+  R.note=G.direct?'Direct delivery: one driver collects from the merchant and delivers to the customer. The customer is quoted the band for the direct distance and the driver is paid their rank rate on the full fee.':'Zone handover: the customer is quoted the band for pick-up → delivery. Split follows each leg’s share of the road distance.';
+  const s=G.direct?0:G.l1.km+G.l2.km;R.auto=G.direct?100:(s>0?Math.round(G.l1.km/s*100):50);R.ref=G.ac.km;
  R.comp=[];
  }else{
   const legs=[[G.l1,'waiveO'],[G.l2,'waiveD']],pr=[];R.tb=[];R.tobIdx=[];
@@ -387,7 +388,7 @@ function render(){
  const prev=S;S=calc();if(!S){$('res').classList.remove('show');return}
  if(S.oos){setStatus(S.oos,true);$('res').classList.remove('show');return}
  if(!prev||prev.auto!==S.auto||!prev.total)$('slide').value=S.auto;
- const pct=+$('slide').value,T=S.total,s1=T*pct/100,s2=T-s1,r1=+$('r1').value,r2=+$('r2').value,p1=pay(s1,r1),p2=pay(s2,r2);
+ const dr=!!G.direct;$('slide').disabled=dr;if(dr)$('slide').value=100;const pct=+$('slide').value,T=S.total,s1=T*pct/100,s2=T-s1,r1=+$('r1').value,r2=+$('r2').value,p1=pay(s1,r1),p2=pay(s2,r2);
  $('res').classList.add('show');$('mode').textContent=S.mode;$('tot').textContent=fmt(T);$('meta').textContent=S.meta;
  $('lines').innerHTML=S.lines.map(l=>`<div class="li"><span>${l[0]}</span><span>${fmt(l[1])}</span></div>`).join('');
  $('warn').innerHTML=S.warn.join('<br>');
@@ -396,22 +397,26 @@ function render(){
  $('splitNote').textContent=S.note+(pct!==S.auto?` (Manually adjusted — auto split would be ${S.auto}% / ${100-S.auto}%.)`:'');
  const inter=G.inter;$('sl1').textContent=(inter?'Origin driver ':'Pick-up leg ')+pct+'%';$('sl2').textContent=(inter?'Destination driver ':'Delivery leg ')+(100-pct)+'%';
  $('d1t').textContent=`Driver 1 · ${RANKS[r1]} — ${fmt(p1.drv)}`;$('d1l').textContent=`${G.l1.from} → ${G.l1.to} · ${G.l1.km.toFixed(1)} km`;$('d1b').innerHTML=kvs(p1,s1)+`<div class="kv big"><span>Driver 1 earns</span><span class="v">${fmt(p1.drv)}</span></div>`;
- $('d2t').textContent=`Driver 2 · ${RANKS[r2]} — ${fmt(p2.drv)}`;$('d2l').textContent=`${G.l2.from} → ${G.l2.to} · ${G.l2.km.toFixed(1)} km`;$('d2b').innerHTML=kvs(p2,s2)+`<div class="kv big"><span>Driver 2 earns</span><span class="v">${fmt(p2.drv)}</span></div>`;
+ if(!dr){$('d2t').textContent=`Driver 2 · ${RANKS[r2]} — ${fmt(p2.drv)}`;$('d2l').textContent=`${G.l2.from} → ${G.l2.to} · ${G.l2.km.toFixed(1)} km`;$('d2b').innerHTML=kvs(p2,s2)+`<div class="kv big"><span>Driver 2 earns</span><span class="v">${fmt(p2.drv)}</span></div>`}
+ $('d2t').parentElement.classList.toggle('hidden',dr);$('slide').classList.toggle('hidden',dr);$('sl1').parentElement.classList.toggle('hidden',dr);
+ if(dr){$('d1t').textContent=`Driver · ${RANKS[r1]} — ${fmt(p1.drv)}`;$('d1b').innerHTML=$('d1b').innerHTML.replace('Driver 1 earns','Driver earns');$('splitNote').textContent=S.note}
  const fe=inter?cfg('cfgFerry'):0,co=p1.co+p2.co-fe;
- $('cob').innerHTML=`<div class="kv"><span>From leg 1 (${100-p1.dp}%)</span><span>${fmt(p1.co)}</span></div><div class="kv"><span>From leg 2 (${100-p2.dp}%)</span><span>${fmt(p2.co)}</span></div>`+(fe?`<div class="kv"><span>Less ferry/terminal cost</span><span>${fmt(-fe)}</span></div>`:'')+`<div class="kv big"><span>Company earns</span><span class="v">${fmt(co)}</span></div><div class="kv"><span>Effective company share</span><span>${T?(co/T*100).toFixed(1):0}%</span></div>`;
+ $('cob').innerHTML=`<div class="kv"><span>${dr?'From delivery':'From leg 1'} (${100-p1.dp}%)</span><span>${fmt(p1.co)}</span></div>${dr?'':`<div class="kv"><span>From leg 2 (${100-p2.dp}%)</span><span>${fmt(p2.co)}</span></div>`}`+(fe?`<div class="kv"><span>Less ferry/terminal cost</span><span>${fmt(-fe)}</span></div>`:'')+`<div class="kv big"><span>Company earns</span><span class="v">${fmt(co)}</span></div><div class="kv"><span>Effective company share</span><span>${T?(co/T*100).toFixed(1):0}%</span></div>`;
  const w=v=>Math.max(0,v/T*100).toFixed(2)+'%';
  $('bar').innerHTML=`<span style="width:${w(p1.drv)};background:#1C5296"></span><span style="width:${w(p2.drv)};background:#3FA129"></span><span style="width:${w(co)};background:#F0A202"></span>`}
 $('reset').onclick=()=>{[0,1,2].forEach(i=>{$('p'+i).value='';loc[i]=null;tag(i)});G=null;S=null;$('res').classList.remove('show');setStatus('')};
 $('go').onclick=async()=>{$('go').disabled=true;setStatus('Finding locations…');
  try{const a=await resolve(0),c=await resolve(2);if(!a||!c){setStatus('Enter a pick-up and a delivery location. One could not be found.',true);return}
-  const inter=isl(a.lat)!==isl(c.lat),m=inter?null:await resolve(1);if(!inter&&!m){setStatus('Enter the meet-up / handover point.',true);return}
+  const inter=isl(a.lat)!==isl(c.lat),dir=!inter&&$('dtype').value==='direct',m=(inter||dir)?null:await resolve(1);if(!inter&&!dir&&!m){setStatus('Enter the meet-up / handover point.',true);return}
   setStatus('Measuring road distances…');
   if(inter){const o=isl(a.lat),d=isl(c.lat),op=PORTS[o],dp=PORTS[d],[l1,l2]=await Promise.all([rk(a,op),rk(dp,c)]);
    G={inter,o,d,l1:{...l1,from:a.name,to:op.name,isl:ISLN[o]},l2:{...l2,from:dp.name,to:c.name,isl:ISLN[d]}}}
-  else{const[l1,l2,ac]=await Promise.all([rk(a,m),rk(m,c),rk(a,c)]);G={inter,l1:{...l1,from:a.name,to:m.name},l2:{...l2,from:m.name,to:c.name},ac}}
+  else if(dir){const ac=await rk(a,c);G={inter:false,direct:true,l1:{...ac,from:a.name,to:c.name},l2:null,ac}}
+  else{const[l1,l2,ac]=await Promise.all([rk(a,m),rk(m,c),rk(a,c)]);G={inter,direct:false,l1:{...l1,from:a.name,to:m.name},l2:{...l2,from:m.name,to:c.name},ac}}
   setStatus('Done.');S=null;render();$('res').scrollIntoView({behavior:'smooth',block:'start'})}
  catch(e){setStatus('Lookup failed — check your connection or choose places from the list.',true)}finally{$('go').disabled=false}};
 $('wt').addEventListener('input',()=>{if(cfg('wt')>=25)$('d2').checked=true});
+$('dtype').addEventListener('change',()=>{G=null;S=null;sync();setStatus('Delivery type changed — press Calculate Fee.')});
 document.addEventListener('input',e=>{if(e.target.dataset.r)document.querySelector(`[data-rv="${e.target.dataset.r}"]`).textContent=fmt(+e.target.value);if(e.target.id!=='go')render()});
 document.addEventListener('change',render);render();
 </script>
