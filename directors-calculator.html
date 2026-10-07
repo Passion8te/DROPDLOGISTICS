@@ -155,7 +155,6 @@ textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radi
     <div class="drv co"><h3>Dropd Logistics (company)</h3><div class="leg">Company share from each leg, 30–33% depending on rank</div><div id="cob"></div></div>
     <div class="bar" id="bar"></div><div class="legend"><span><i style="background:#1C5296"></i>Pick-up driver</span><span><i style="background:#3FA129"></i>Delivery driver</span><span><i style="background:#F0A202"></i>Company</span></div>
    </div>
-   <div class="card" id="tobCard"><p class="st">Tobago rates</p><p class="sh">Tobago leg fee and driver payout for this job, plus the full Tobago rate card.</p><div id="tob"></div></div>
   </div>
   <div class="actions"><button class="btn" id="go">Calculate Fee</button><button class="ghost" id="reset" type="button">Reset</button><div class="status" id="status"></div></div>
  </div>
@@ -401,23 +400,7 @@ function render(){
  const fe=inter?cfg('cfgFerry'):0,co=p1.co+p2.co-fe;
  $('cob').innerHTML=`<div class="kv"><span>From leg 1 (${100-p1.dp}%)</span><span>${fmt(p1.co)}</span></div><div class="kv"><span>From leg 2 (${100-p2.dp}%)</span><span>${fmt(p2.co)}</span></div>`+(fe?`<div class="kv"><span>Less ferry/terminal cost</span><span>${fmt(-fe)}</span></div>`:'')+`<div class="kv big"><span>Company earns</span><span class="v">${fmt(co)}</span></div><div class="kv"><span>Effective company share</span><span>${T?(co/T*100).toFixed(1):0}%</span></div>`;
  const w=v=>Math.max(0,v/T*100).toFixed(2)+'%';
- $('bar').innerHTML=`<span style="width:${w(p1.drv)};background:#1C5296"></span><span style="width:${w(p2.drv)};background:#3FA129"></span><span style="width:${w(co)};background:#F0A202"></span>`;renderTob(s1,p1,s2,p2)}
-function renderTob(s1,p1,s2,p2){
- const T=table('cfgBandsT'),tb=S.tb||[],ix=S.tobIdx||[],on=new Set(tb.map(x=>x.max));let h='';
- if(ix.length){const sh=ix.reduce((a,i)=>a+(i===1?s1:s2),0),dr=ix.reduce((a,i)=>a+(i===1?p1:p2).drv,0);
-  h+=tb.map(x=>`<div class="kv"><span>${x.t}</span><span>${fmt(x.v)}</span></div>`).join('')+`<div class="kv"><span>Fee share for Tobago leg(s)</span><span>${fmt(sh)}</span></div><div class="kv"><span>Company on Tobago leg(s)</span><span>${fmt(sh-dr)}</span></div><div class="kv big"><span>Tobago driver earns</span><span class="v">${fmt(dr)}</span></div>`}
- else h+='<div class="mu">This job has no Tobago leg. The Tobago rate card is shown below for reference.</div>';
- const p=parcel(),wf=weightFee(p.ch),sf=p.cls==='Oversize'?cfg('cfgOSf'):p.cls==='Large'?cfg('cfgLGf'):0,sp=SPEED[S.speed]||0,base=cfg('cfgBase'),ii=base+wf+sf+sp,W=table('cfgWt');
- h+=`<div class="rt" style="margin-top:12px">Inter-island charges for this parcel (live)</div>`+
-  `<div class="kv"><span>Inter-island base fee</span><span>${fmt(base)}</span></div>`+
-  `<div class="kv"><span>Weight fee (${p.ch.toFixed(1)} kg chargeable${p.vol>p.w?', volumetric':''})</span><span>${fmt(wf)}</span></div>`+
-  `<div class="kv"><span>${p.cls==='Standard'?'Size fee (standard size)':p.cls+' item fee ('+p.side.toFixed(0)+' cm longest side)'}</span><span>${fmt(sf)}</span></div>`+
-  (sp?`<div class="kv"><span>${LBL[S.speed]} surcharge</span><span>${fmt(sp)}</span></div>`:'')+
-  `<div class="kv big"><span>Inter-island total</span><span class="v">${fmt(ii)}</span></div>`;
- h+='<div class="rt" style="margin-top:12px">Tobago leg + inter-island, by distance band</div><div class="tb" style="grid-template-columns:1fr auto auto"><div class="mu">Band</div><div class="mu">Band fee</div><div class="mu">With inter-island</div>'+T.map(r=>{const c=on.has(r[0])?'on':'';return`<div class="${c}">Up to ${r[0]} km</div><div class="${c}">${fmt(r[1])}</div><div class="${c}">${fmt(r[1]+ii)}</div>`}).join('')+'</div>';
- h+=`<div class="rt" style="margin-top:12px">Weight fee schedule (from settings)</div><div class="tb">`+W.map((r,k)=>`<div>${k?'Over '+W[k-1][0]+' up to ':'Up to '}${r[0]} kg</div><div>${fmt(r[1])}</div>`).join('')+(W.length?`<div>Beyond ${W[W.length-1][0]} kg</div><div>+${fmt(cfg('cfgOver'))} / kg</div>`:'')+`</div>`;
- h+=`<div class="rt" style="margin-top:12px">Other Trinidad ↔ Tobago extras</div><div class="kv"><span>Same-Day / Rush surcharge</span><span>+${fmt(SPEED.sameday)} / +${fmt(SPEED.rush)}</span></div><div class="kv"><span>Large item (from ${cfg('cfgLG')} cm) / Oversize (from ${cfg('cfgOS')} cm)</span><span>${fmt(cfg('cfgLGf'))} / ${fmt(cfg('cfgOSf'))}</span></div><div class="kv"><span>Volumetric divisor</span><span>${cfg('cfgVol')} cm³/kg</span></div><div class="kv"><span>Freight-quote warning above</span><span>${cfg('cfgMax')} kg</span></div>`;
-$('tob').innerHTML=h}
+ $('bar').innerHTML=`<span style="width:${w(p1.drv)};background:#1C5296"></span><span style="width:${w(p2.drv)};background:#3FA129"></span><span style="width:${w(co)};background:#F0A202"></span>`}
 $('reset').onclick=()=>{[0,1,2].forEach(i=>{$('p'+i).value='';loc[i]=null;tag(i)});G=null;S=null;$('res').classList.remove('show');setStatus('')};
 $('go').onclick=async()=>{$('go').disabled=true;setStatus('Finding locations…');
  try{const a=await resolve(0),c=await resolve(2);if(!a||!c){setStatus('Enter a pick-up and a delivery location. One could not be found.',true);return}
