@@ -108,7 +108,7 @@ textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radi
   </div>
   <div class="card"><details><summary>Extra services &amp; add-on fees <span class="badge" id="fcount"></span></summary><div id="feeList" style="margin-top:10px"></div></details></div>
   <div class="card"><details><summary>Director settings (editable — recalculates instantly)</summary>
-   <p class="sh" style="margin-top:8px">Inter-island, weight and handling figures are proposals benchmarked to oDeliver and CSF; adjust to your strategy.</p>
+   <p class="sh" style="margin-top:8px">Inter-island, weight and handling figures are proposals; adjust to your strategy.</p>
    <label class="fl">Trinidad distance bands — "up to km : TT$", one per line</label><textarea id="cfgBands" rows="5">5:30
 10:35
 20:40
@@ -271,7 +271,6 @@ textarea{width:100%;padding:10px 12px;border:1.5px solid var(--line);border-radi
     { name: 'Speyside', lat: 11.2960, lng: -60.5310 },
     { name: 'Charlotteville', lat: 11.3260, lng: -60.5460 }
   ];
-const BANDS_OD=[[2,25],[5,30],[8,35],[12,50],[16,55],[20,65],[25,75],[30,90],[35,105],[40,120],[50,150],[60,180],[70,210],[80,240],[90,270],[100,300]];
 const RANKS=['Rookie','Pro','Elite','Icon'],SPEED={standard:0,sameday:10,rush:20},LBL={standard:'Standard',sameday:'Same-Day',rush:'Rush'};
 const TIERS=[{min:5,max:9,d:5,l:'Volume'},{min:10,max:24,d:6,l:'Business'},{min:25,max:99,d:7,l:'Merchant Plus'}];
 const PORTS={TRI:{name:'Port of Spain ferry terminal',lat:10.6485,lng:-61.5120},TOB:{name:'Scarborough ferry terminal',lat:11.1816,lng:-60.7330}};
@@ -352,7 +351,7 @@ function calc(){
   R.tb=tob?[{t:`Pick-up → delivery (${G.ac.km.toFixed(1)} km), band up to ${b.max} km`,v:b.price,max:b.max}]:[];R.tobIdx=tob?[1,2]:[];R.mode='Zone handover · '+ISLN[isl(loc[0].lat)];R.meta=`Route: ${G.l1.from} → ${G.l1.to} → ${G.l2.to} · legs ${G.l1.km.toFixed(1)} km + ${G.l2.km.toFixed(1)} km`;
   R.note='Zone handover: the customer is quoted the band for pick-up → delivery. Split follows each leg’s share of the road distance.';
   const s=G.l1.km+G.l2.km;R.auto=s>0?Math.round(G.l1.km/s*100):50;R.ref=G.ac.km;
-  const od=BANDS_OD.find(x=>G.ac.km<=x[0]);R.comp=[['oDeliver Instant (flat by distance, up to 100 km)',od?od[1]:null,od?'':'beyond their 100 km limit']];
+ R.comp=[];
  }else{
   const legs=[[G.l1,'waiveO'],[G.l2,'waiveD']],pr=[];R.tb=[];R.tobIdx=[];
   for(const[l,w]of legs){const b=bandPrice(l.km,l.isl==='Tobago');if(!b)return{oos:`A leg is ${l.km.toFixed(0)} km, beyond the distance bands. Needs a custom quote.`};
@@ -367,8 +366,7 @@ function calc(){
   R.mode=`Inter-island · ${ISLN[G.o]} → ${ISLN[G.d]}`;R.meta=`Hand-off at ferry terminals: ${PORTS[G.o].name} → ${PORTS[G.d].name}`;
   R.note='Inter-island: the origin-island driver takes the parcel to the ferry terminal; the destination-island driver collects at the arrival terminal. Each leg’s band fee goes to its own driver; the inter-island, weight and handling fees are shared equally by default.';
   R.pre=pr;R.auto=0;R.ref=0;
-  const sm=p.ch<=13.6,md=p.ch<=22.7;
-  R.comp=[['oDeliver Standard, 1–2 days (Tobago tier + TT$30 inter-island)',md?(sm?60:75)+30:null,md?'':'over 50 lb — they quote separately'],['oDeliver Corporate account',md?(sm?65:80)+30:null,md?'':''],['CSF Domestic (24–72 h, merchant subscription TT$25–33 + TT$15 inter-island)',null,'TT$40–48 · slower, subscription-based']];
+  R.comp=[['CSF Domestic (24–72 h, merchant subscription TT$25–33 + TT$15 inter-island)',null,'TT$40–48 · slower, subscription-based']];
  }
  R.core=core;
  // handling that applies to every route
@@ -394,7 +392,7 @@ function render(){
  $('res').classList.add('show');$('mode').textContent=S.mode;$('tot').textContent=fmt(T);$('meta').textContent=S.meta;
  $('lines').innerHTML=S.lines.map(l=>`<div class="li"><span>${l[0]}</span><span>${fmt(l[1])}</span></div>`).join('');
  $('warn').innerHTML=S.warn.join('<br>');
- $('comp').innerHTML=`<div class="cmp"><b>Dropd core price</b><b>${fmt(S.core)}</b></div>`+S.comp.map(c=>{const d=c[1]!=null?S.core-c[1]:null;
+ $('comp').parentElement.classList.toggle('hidden',!S.comp.length);$('comp').innerHTML=`<div class="cmp"><b>Dropd core price</b><b>${fmt(S.core)}</b></div>`+S.comp.map(c=>{const d=c[1]!=null?S.core-c[1]:null;
   return`<div class="cmp"><span>${c[0]}</span><span>${c[1]!=null?fmt(c[1])+' · <span class="'+(d>0?'up':'dn')+'">'+(d===0?'equal':d>0?'Dropd +'+d.toFixed(0):'Dropd −'+Math.abs(d).toFixed(0))+'</span>':(c[2]||'n/a')}</span></div>`}).join('');
  $('splitNote').textContent=S.note+(pct!==S.auto?` (Manually adjusted — auto split would be ${S.auto}% / ${100-S.auto}%.)`:'');
  const inter=G.inter;$('sl1').textContent=(inter?'Origin driver ':'Pick-up leg ')+pct+'%';$('sl2').textContent=(inter?'Destination driver ':'Delivery leg ')+(100-pct)+'%';
@@ -409,9 +407,17 @@ function renderTob(s1,p1,s2,p2){
  if(ix.length){const sh=ix.reduce((a,i)=>a+(i===1?s1:s2),0),dr=ix.reduce((a,i)=>a+(i===1?p1:p2).drv,0);
   h+=tb.map(x=>`<div class="kv"><span>${x.t}</span><span>${fmt(x.v)}</span></div>`).join('')+`<div class="kv"><span>Fee share for Tobago leg(s)</span><span>${fmt(sh)}</span></div><div class="kv"><span>Company on Tobago leg(s)</span><span>${fmt(sh-dr)}</span></div><div class="kv big"><span>Tobago driver earns</span><span class="v">${fmt(dr)}</span></div>`}
  else h+='<div class="mu">This job has no Tobago leg. The Tobago rate card is shown below for reference.</div>';
- h+='<div class="rt" style="margin-top:12px">Tobago distance bands</div><div class="tb">'+T.map(r=>{const c=on.has(r[0])?'on':'';return`<div class="${c}">Up to ${r[0]} km</div><div class="${c}">${fmt(r[1])}</div>`}).join('')+'</div>';
- h+=`<div class="rt" style="margin-top:12px">Trinidad ↔ Tobago extras</div><div class="kv"><span>Inter-island base fee</span><span>${fmt(cfg('cfgBase'))}</span></div><div class="kv"><span>Same-Day / Rush surcharge</span><span>+${fmt(SPEED.sameday)} / +${fmt(SPEED.rush)}</span></div><div class="kv"><span>Large / Oversize item</span><span>${fmt(cfg('cfgLGf'))} / ${fmt(cfg('cfgOSf'))}</span></div><div class="kv"><span>oDeliver Tobago tier (≤13.6 kg / ≤22.7 kg)</span><span>TT$60 / TT$75</span></div>`;
- $('tob').innerHTML=h}
+ const p=parcel(),wf=weightFee(p.ch),sf=p.cls==='Oversize'?cfg('cfgOSf'):p.cls==='Large'?cfg('cfgLGf'):0,sp=SPEED[S.speed]||0,base=cfg('cfgBase'),ii=base+wf+sf+sp,W=table('cfgWt');
+ h+=`<div class="rt" style="margin-top:12px">Inter-island charges for this parcel (live)</div>`+
+  `<div class="kv"><span>Inter-island base fee</span><span>${fmt(base)}</span></div>`+
+  `<div class="kv"><span>Weight fee (${p.ch.toFixed(1)} kg chargeable${p.vol>p.w?', volumetric':''})</span><span>${fmt(wf)}</span></div>`+
+  `<div class="kv"><span>${p.cls==='Standard'?'Size fee (standard size)':p.cls+' item fee ('+p.side.toFixed(0)+' cm longest side)'}</span><span>${fmt(sf)}</span></div>`+
+  (sp?`<div class="kv"><span>${LBL[S.speed]} surcharge</span><span>${fmt(sp)}</span></div>`:'')+
+  `<div class="kv big"><span>Inter-island total</span><span class="v">${fmt(ii)}</span></div>`;
+ h+='<div class="rt" style="margin-top:12px">Tobago leg + inter-island, by distance band</div><div class="tb" style="grid-template-columns:1fr auto auto"><div class="mu">Band</div><div class="mu">Band fee</div><div class="mu">With inter-island</div>'+T.map(r=>{const c=on.has(r[0])?'on':'';return`<div class="${c}">Up to ${r[0]} km</div><div class="${c}">${fmt(r[1])}</div><div class="${c}">${fmt(r[1]+ii)}</div>`}).join('')+'</div>';
+ h+=`<div class="rt" style="margin-top:12px">Weight fee schedule (from settings)</div><div class="tb">`+W.map((r,k)=>`<div>${k?'Over '+W[k-1][0]+' up to ':'Up to '}${r[0]} kg</div><div>${fmt(r[1])}</div>`).join('')+(W.length?`<div>Beyond ${W[W.length-1][0]} kg</div><div>+${fmt(cfg('cfgOver'))} / kg</div>`:'')+`</div>`;
+ h+=`<div class="rt" style="margin-top:12px">Other Trinidad ↔ Tobago extras</div><div class="kv"><span>Same-Day / Rush surcharge</span><span>+${fmt(SPEED.sameday)} / +${fmt(SPEED.rush)}</span></div><div class="kv"><span>Large item (from ${cfg('cfgLG')} cm) / Oversize (from ${cfg('cfgOS')} cm)</span><span>${fmt(cfg('cfgLGf'))} / ${fmt(cfg('cfgOSf'))}</span></div><div class="kv"><span>Volumetric divisor</span><span>${cfg('cfgVol')} cm³/kg</span></div><div class="kv"><span>Freight-quote warning above</span><span>${cfg('cfgMax')} kg</span></div>`;
+$('tob').innerHTML=h}
 $('reset').onclick=()=>{[0,1,2].forEach(i=>{$('p'+i).value='';loc[i]=null;tag(i)});G=null;S=null;$('res').classList.remove('show');setStatus('')};
 $('go').onclick=async()=>{$('go').disabled=true;setStatus('Finding locations…');
  try{const a=await resolve(0),c=await resolve(2);if(!a||!c){setStatus('Enter a pick-up and a delivery location. One could not be found.',true);return}
