@@ -14,25 +14,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,300;1,400&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,300;1,9..144,400;1,9..144,700;1,9..144,900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
-<!-- ============================================================
-     CONNECTION POINTS — UPDATE THESE WHEN SYSTEMS CHANGE
-     ============================================================
-     WHATSAPP LINK        : https://wa.me/18686203868
-     BOOKING FORM         : #booking-form-url  (replace with Google Form URL)
-     DRIVER FORM          : #driver-form-url   (replace with Google Form URL)
-     HEALTH CHECK FORM    : #health-check-url  (replace with Google Form URL)
-     SHIPDAY TRACKING     : #shipday-track-url (replace with Shipday tracking URL)
-     TRACKING LOOKUP URL  : #tracking-lookup-url (replace with your Google Apps Script Web App URL
-                             that looks up an order by Tracking ID and returns JSON — see the
-                             TRACKING_LOOKUP_URL constant and trackDelivery() function near the
-                             end of this file for the expected request/response format)
-     LEADERBOARD CSV URL  : #leaderboard-csv-url (replace with published Google Sheet CSV URL — see instructions below)
-     EMAIL                : info@dropdlogistics.com
-     INSTAGRAM            : https://instagram.com/dropdlogistics
-     FACEBOOK             : https://facebook.com/dropdlogistics
-     TIKTOK               : https://tiktok.com/@dropdlogistics
-     GOOGLE ANALYTICS     : Replace UA-XXXXXXXX with your GA4 measurement ID
-     ============================================================ -->
+
 
 <style>
 /* ── DESIGN TOKENS ─────────────────────────────────────────── */
@@ -2160,8 +2142,7 @@ if(window.top!==window.self){try{window.top.location=window.self.location;}catch
       <div class="step">
         <div class="step-num-wrap"><div class="step-num">2</div></div>
         <h3>We Dispatch</h3>
-        <!-- CONNECTION POINT: Shipday auto-dispatch reference -->
-        <p>Your nearest available driver is assigned instantly via Shipday AI dispatch. You receive a live GPS tracking link the moment they are on the way.</p>
+                <p>Your nearest available driver is assigned instantly through the Dropd app. You receive a live GPS tracking link the moment they are on the way.</p>
       </div>
       <div class="step">
         <div class="step-num-wrap"><div class="step-num">3</div></div>
@@ -2206,7 +2187,7 @@ if(window.top!==window.self){try{window.top.location=window.self.location;}catch
       <div class="why-card">
         <div class="why-card-icon"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#2ECC71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg></div>
         <h3>Caribbean-First</h3>
-        <p>DHL doesn't care about your 5,000 sq mi island. We do. DROPD is built for Trinidad first — local payment rails, local culture, local execution.</p>
+        <p>We know every corner of your 5,000 sq mi island. DROPD is built for Trinidad first — local payment rails, local culture, local execution.</p>
       </div>
       <div class="why-card">
         <div class="why-card-icon"><svg viewBox="0 0 24 24" width="36" height="36" fill="none" stroke="#2ECC71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
@@ -5021,14 +5002,30 @@ updateProg(1);
 */
 const TRACKING_LOOKUP_URL = '#tracking-lookup-url';
 
+/* Security: escape anything that came from a server/sheet before it goes into innerHTML */
+function esc(v){
+  return String(v == null ? '' : v).replace(/[&<>"'`]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c];
+  });
+}
+function safeHttpsUrl(u){
+  try{ var x = new URL(String(u), location.href); return x.protocol === 'https:' ? x.href : ''; }
+  catch(e){ return ''; }
+}
+
 async function trackDelivery(){
   const idInput = document.getElementById('trk-input');
-  const id = idInput.value.trim();
+  const id = idInput.value.trim().slice(0,64);
   const statusEl = document.getElementById('trk-status');
   const btn = document.getElementById('trk-btn');
   if(!id){
     statusEl.className = 'trk-status show';
     statusEl.innerHTML = '<div class="trk-error">Please enter a Tracking ID.</div>';
+    return;
+  }
+  if(!/^[A-Za-z0-9_-]{3,64}$/.test(id)){
+    statusEl.className = 'trk-status show';
+    statusEl.innerHTML = '<div class="trk-error">Tracking IDs use letters, numbers and dashes only. Please check yours and try again.</div>';
     return;
   }
   if(!TRACKING_LOOKUP_URL || TRACKING_LOOKUP_URL === '#tracking-lookup-url'){
@@ -5044,22 +5041,22 @@ async function trackDelivery(){
     if(!res.ok) throw new Error('Lookup failed: ' + res.status);
     const data = await res.json();
     if(!data.found){
-      statusEl.innerHTML = '<div class="trk-error">No delivery found for "' + id.replace(/</g,'&lt;') + '". Double-check the Tracking ID or message us on WhatsApp.</div>';
+      statusEl.innerHTML = '<div class="trk-error">No delivery found for "' + esc(id) + '". Double-check the Tracking ID or message us on WhatsApp.</div>';
     } else {
-      const steps = (data.steps || []).map(s => `
-        <li class="${s.done ? 'done' : ''}">${s.label}${s.time ? '<span class="trk-step-time">'+s.time+'</span>' : ''}</li>
+      const steps = (Array.isArray(data.steps) ? data.steps : []).map(s => `
+        <li class="${s.done ? 'done' : ''}">${esc(s.label)}${s.time ? '<span class="trk-step-time">'+esc(s.time)+'</span>' : ''}</li>
       `).join('');
       statusEl.innerHTML = `
         <div class="trk-result-head">
-          <span class="trk-result-id">${id.replace(/</g,'&lt;')}</span>
-          <span class="trk-result-badge">${data.status || 'Processing'}</span>
+          <span class="trk-result-id">${esc(id)}</span>
+          <span class="trk-result-badge">${esc(data.status || 'Processing')}</span>
         </div>
         <div class="trk-meta">
-          ${data.driver ? `<div><span class="trk-meta-label">Driver</span><span class="trk-meta-value">${data.driver}</span></div>` : ''}
-          ${data.eta ? `<div><span class="trk-meta-label">ETA</span><span class="trk-meta-value">${data.eta}</span></div>` : ''}
+          ${data.driver ? `<div><span class="trk-meta-label">Driver</span><span class="trk-meta-value">${esc(data.driver)}</span></div>` : ''}
+          ${data.eta ? `<div><span class="trk-meta-label">ETA</span><span class="trk-meta-value">${esc(data.eta)}</span></div>` : ''}
         </div>
         <ul class="trk-steps">${steps}</ul>
-        ${data.photoUrl ? `<div class="trk-photo"><span class="trk-meta-label">Proof of Delivery</span><img src="${data.photoUrl}" alt="Proof of delivery"></div>` : ''}
+        ${safeHttpsUrl(data.photoUrl) ? `<div class="trk-photo"><span class="trk-meta-label">Proof of Delivery</span><img src="${esc(safeHttpsUrl(data.photoUrl))}" alt="Proof of delivery" referrerpolicy="no-referrer"></div>` : ''}
       `;
     }
   } catch(err){
@@ -5209,6 +5206,11 @@ function findCol(row, ...candidates){
   return '';
 }
 
+function escH(v){
+  return String(v == null ? '' : v).replace(/[&<>"'`]/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;','`':'&#96;'}[c];
+  });
+}
 function renderHustleBoard(rows){
   const container = document.getElementById('hustleRows');
   if(!rows.length){
@@ -5229,10 +5231,10 @@ function renderHustleBoard(rows){
   container.innerHTML = top.map((d,i)=>`
     <div class="hustle-row ${i===0?'rank-1':''}">
       <div class="hustle-rank">${medals[i] || (i+1)}</div>
-      <div class="hustle-name">${d.name}</div>
-      <div class="hustle-stat"><div class="hustle-stat-num">${d.deliveries}</div><div class="hustle-stat-label">Drops</div></div>
-      <div class="hustle-stat"><div class="hustle-stat-num">${d.onTime || '—'}</div><div class="hustle-stat-label">On-Time</div></div>
-      <div class="hustle-stat"><div class="hustle-stat-num">${d.rating || '—'}</div><div class="hustle-stat-label">Rating</div></div>
+      <div class="hustle-name">${escH(d.name)}</div>
+      <div class="hustle-stat"><div class="hustle-stat-num">${escH(d.deliveries)}</div><div class="hustle-stat-label">Drops</div></div>
+      <div class="hustle-stat"><div class="hustle-stat-num">${escH(d.onTime) || '—'}</div><div class="hustle-stat-label">On-Time</div></div>
+      <div class="hustle-stat"><div class="hustle-stat-num">${escH(d.rating) || '—'}</div><div class="hustle-stat-label">Rating</div></div>
     </div>
   `).join('');
 }
